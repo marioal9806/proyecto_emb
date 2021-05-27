@@ -35,19 +35,18 @@ import sqlite3
 # Importar clase Estudiante
 from estudiante import Estudiante
 
+# Importar clase FPGA para comunicación por I2C
+from i2c_fpga import FPGA
+
+# Inicializar conexión I2C a través del canal 1 de la Raspberry
+# con la slave address 0x38
+fpga_board = FPGA(1, 0x38)
+
 # Crear conexion base de datos
 conn = sqlite3.connect('estudiantes.db')
 
 # Crear un cursor para ejecutar instrucciones de SQL
 c = conn.cursor()
-
-
-def add_student(student):
-    """Este metodo agrega una instancia de Estudiante a la Base de datos"""
-    with conn:
-        c.execute("INSERT INTO estudiantes VALUES(:nombre, :matricula, :uid, :indice)",
-                  {'nombre': student.nombre, 'matricula': student.matricula, 'uid': student.uid, 'indice': student.indice})
-
 
 def get_student_by_uid(uid):
     """Busca estudiantes dentro de la base de datos por medio de su UID"""
@@ -109,5 +108,7 @@ while continue_reading:
         else:
             student = Estudiante(*query_result)
             print(f"Welcome, {student.nombre} - {student.matricula}")
+            # Enviar indice a la FPGA
+            fpga_board.send_index(student.indice)
 
         time.sleep(3)
