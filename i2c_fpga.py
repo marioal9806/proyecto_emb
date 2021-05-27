@@ -10,8 +10,6 @@ alumno:
 - nombre
 - id de la tarjeta
 - identificador de la FPGA
-
-
 """
 
 import time
@@ -23,7 +21,7 @@ i2c_address = 0x38
 
 bus = smbus.SMBus(i2c_ch)
 
-index = 0x00
+index = 0xAA
 
 #bus.write_byte_data(i2c_address, 0x00, index)
 bus.write_byte(i2c_address, index)
