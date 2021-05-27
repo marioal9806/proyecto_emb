@@ -1,3 +1,29 @@
+"""
+El siguiente programa es utilizado para leer el UID de una tarjeta a través del lector
+RFID RC522 a través del módulo MFRC522.py.
+
+La base de datos está implementada por medio de SQLite3 y su librería nativa de Python.
+Dentro de ella, se definió una tabla llamada "estudiantes". Cada registro contiene los
+siguientes campos:
+- Nombre
+- Matrícula
+- UID
+- Índice
+
+La manera en la que autenticaremos al estudiante será comparar el UID de la tarjeta
+con los registros guardados en la base de datos. Si se encuentra al usuario, la autenticación
+resultó exitosa. Si la búsqueda regresa una lista vacía o None, el usuario no se encuentra
+dentro de la base de datos.
+
+Finalmente, si se cuenta con una autenticación exitosa, se enviará el índice del estudiante
+al dispositivo FPGA conectado mediante el puerto I2C. Dicho índice se utilizará para desplegar
+los datos del usuario.
+
+Dependencias:
+https://github.com/naleefer/SPI-Py
+https://github.com/naleefer/MFRC522-python
+"""
+
 import RPi.GPIO as GPIO
 import MFRC522
 import signal
@@ -15,32 +41,25 @@ conn = sqlite3.connect('estudiantes.db')
 # Crear un cursor para ejecutar instrucciones de SQL
 c = conn.cursor()
 
-# Definir un metodo para agregar estudiantes a la db
-
 
 def add_student(student):
-    """Este metodo agrega una instancia de estudiante a la Base de datos"""
+    """Este metodo agrega una instancia de Estudiante a la Base de datos"""
     with conn:
         c.execute("INSERT INTO estudiantes VALUES(:nombre, :matricula, :uid, :indice)",
                   {'nombre': student.nombre, 'matricula': student.matricula, 'uid': student.uid, 'indice': student.indice})
 
-# Definir un metodo para encontrar estudiantes por medio de su uid
-
 
 def get_student_by_uid(uid):
+    """Busca estudiantes dentro de la base de datos por medio de su UID"""
     c.execute("SELECT * FROM estudiantes WHERE uid=:uid", {'uid': uid})
-    return c.fetchall()
-
-#estudiante_1 = Estudiante('Mario', 'A01730557', '73171579', '1')
-# add_student(estudiante_1)
+    return c.fetchone()
 
 
 continue_reading = True
 
-# Capture SIGINT for cleanup when the script is aborted
-
 
 def end_read(signal, frame):
+    """Capture SIGINT for cleanup when the script is aborted"""
     global continue_reading
     print("Ctrl+C captured, ending read.")
     continue_reading = False
@@ -77,31 +96,18 @@ while continue_reading:
         print("Card read UID: %s,%s,%s,%s,%s" %
               (uid[0], uid[1], uid[2], uid[3], uid[4]))
 
+        # Generate a single UID string
         uid_str = "".join([str(pair) for pair in uid])
         print(uid_str)
+
+        # Query the Database using the UID string
         query_result = get_student_by_uid(uid_str)
         print(query_result)
-
-        # La manera en la que autenticaremos al estudiante será comparar el UID de la tarjeta
-        # con los registros guardados en la base de datos. Si se encuentra al usuario, la autenticación
-        # resultó exitosa. Si la búsqueda regresa una lista vacía o None, el usuario no se encuentra
-        # dentro de la base de datos
-
-        # This is the default key for authentication
-        key = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
-
-        # Select the scanned tag
-        MIFAREReader.MFRC522_SelectTag(uid)
-
-        # Authenticate
-        status = MIFAREReader.MFRC522_Auth(
-            MIFAREReader.PICC_AUTHENT1A, 8, key, uid)
-
-        # Check if authenticated
-        if status == MIFAREReader.MI_OK:
-            MIFAREReader.MFRC522_Read(8)
-            MIFAREReader.MFRC522_StopCrypto1()
+        
+        if query_result is None:
+            print("Authentication failed.")
         else:
-            print("Authentication error")
+            student = Estudiante(*query_result)
+            print(f"Welcome, {student.nombre} - {student.matricula}")
 
         time.sleep(3)
