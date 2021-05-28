@@ -108,7 +108,11 @@ while continue_reading:
         else:
             student = Estudiante(*query_result)
             print(f"Welcome, {student.nombre} - {student.matricula}")
+            
             # Enviar indice a la FPGA
             fpga_board.send_index(student.indice)
+            time.sleep(60)
+            # Reiniciar el índice para el siguiente usuario
+            fpga_board.send_byte(0x00)
 
         time.sleep(3)
