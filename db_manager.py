@@ -17,7 +17,9 @@ cur = con.cursor()
 
 cur.execute("SELECT * FROM estudiantes")
 rows = cur.fetchall()
-print(rows)
+for student in rows:
+    print(student)
+
 '''
 #---------- Datos de las tarjetas de Mario ----------
 
