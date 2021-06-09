@@ -119,6 +119,10 @@ while continue_reading:
                     print("Se cierra la puerta")
                     fpga_board.send_byte(0x00)
                     cont += 60
+                elif cont == 59:
+                    print("Se cierra la puerta")
+                    fpga_board.send_byte(0x00)
+                    cont += 1
                 else:
                     cont += 1
                     time.sleep(1)
