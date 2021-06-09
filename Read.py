@@ -53,9 +53,7 @@ def get_student_by_uid(uid):
     c.execute("SELECT * FROM estudiantes WHERE uid=:uid", {'uid': uid})
     return c.fetchone()
 
-
 continue_reading = True
-
 
 def end_read(signal, frame):
     """Capture SIGINT for cleanup when the script is aborted"""
@@ -64,20 +62,24 @@ def end_read(signal, frame):
     continue_reading = False
     GPIO.cleanup()
 
-
 # Hook the SIGINT
 signal.signal(signal.SIGINT, end_read)
 
 # Create an object of the class MFRC522
 MIFAREReader = MFRC522.MFRC522()
 
+#Botón para cerrar la puerta
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(36, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
 # Welcome message
 print("Welcome to the MFRC522 data read example")
 print("Press Ctrl-C to stop.")
+fpga_board.send_byte(0x00)
 
 # This loop keeps checking for chips. If one is near it will get the UID and authenticate
 while continue_reading:
-
+    cont = 0
     # Scan for cards
     (status, TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
 
@@ -102,17 +104,22 @@ while continue_reading:
         # Query the Database using the UID string
         query_result = get_student_by_uid(uid_str)
         print(query_result)
-        
+
         if query_result is None:
             print("Authentication failed.")
         else:
             student = Estudiante(*query_result)
             print(f"Welcome, {student.nombre} - {student.matricula}")
-            
+
             # Enviar indice a la FPGA
             fpga_board.send_index(student.indice)
-            time.sleep(60)
-            # Reiniciar el índice para el siguiente usuario
-            fpga_board.send_byte(0x00)
 
+            while(cont < 60):
+                if GPIO.input(36) == GPIO.HIGH:
+                    print("Se cierra la puerta")
+                    fpga_board.send_byte(0x00)
+                    cont += 60
+                else:
+                    cont += 1
+                    time.sleep(1)
         time.sleep(3)
